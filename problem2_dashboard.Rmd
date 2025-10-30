@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Weather data of NYC"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
@@ -8,29 +8,127 @@ output:
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
+library(dplyr)
+library(tidyverse)
+library(plotly)
+library(p8105.datasets)
+data("ny_noaa")
+
+
 ```
 
 Column {data-width=650}
 -----------------------------------------------------------------------
 
-### Chart A
+### Scatter Plot of Maximum temperature and Precipitation on snowy days in 1996
 
-```{r}
+```{r }
 
+pb =  ny_noaa |>
+  mutate(
+    tmax_c = as.numeric(tmax) / 10,
+    tmin_c = as.numeric(tmin) / 10,
+    prcp_mm =as.numeric(prcp) / 10 # Convert precipitation to mm
+  )|>
+drop_na(tmax_c,tmin_c, prcp_mm, snow) |>
+  
+  filter(year(date)==1996)|>
+  filter(snow > 0)|>
+  
+  plot_ly(  x = ~tmax_c,
+  y = ~prcp_mm,
+  type = 'scatter',
+  mode = 'markers',
+  
+  marker = list(
+    color = ~snow, 
+    colorscale = 'Blues', 
+    reversescale = TRUE,     
+    showscale = TRUE,        
+    colorbar = list(title = "Snowfall (mm)")
+  ),
+  
+  text = ~paste0(
+    "Date: ", date, "<br>",
+    "Max temperature: ", tmax_c, "°C<br>",
+    "Precipitation: ", prcp_mm, " mm<br>",
+    "Snow fall: ", snow, " mm"
+      ),
+  hoverinfo = 'text' # 指定悬停时只显示我们自定义的文本
+) |>
+layout(
+  xaxis = list(title = "Maximum Temperature (°C)"),
+  yaxis = list(title = "Precipitation(mm)")
+)
+
+pb
 ```
 
 Column {data-width=350}
 -----------------------------------------------------------------------
 
-### Chart B
+### Range of Daily Minimum Temperature within Each Month of 2010
 
 ```{r}
 
+p_temp_prcp =
+  ny_noaa |>
+  mutate(
+    tmax_c = as.numeric(tmax) / 10,
+    tmin_c = as.numeric(tmin) / 10,
+    prcp_mm =as.numeric(prcp) / 10 # Convert precipitation to mm
+  )|>
+drop_na(tmax_c,tmin_c, prcp_mm, snow) |>
+  filter(year(date)==2010)|>
+      plot_ly(
+  x = ~month(date),
+  y = ~tmin_c,
+  type = 'box'
+)|> 
+  layout(
+  xaxis = list(title = "Month"),
+  yaxis = list(title = "Minimum Temperature (°C)")
+)
+  
+p_temp_prcp
 ```
 
-### Chart C
+### Average Maximum Temperature per Month from 1981 to 2010
 
-```{r}
+```{r }
+pc = ny_noaa |>
+  mutate(
+    # Convert temperature to Celsius
+    tmax_c = as.numeric(tmax) / 10,
+    tmin_c = as.numeric(tmin) / 10,
+    prcp_mm =as.numeric(prcp) / 10,
+    # Get the month name from the date
+    Month = month(date, label = TRUE, abbr = FALSE)
+  ) |>
+  drop_na(tmax_c,tmin_c, prcp_mm, snow)|>
+  # Group by the new Month column
+  group_by(Month) |>
+  # Calculate the average temperature for each month
+  summarise(
+    AverageTemp = mean(tmax_c)
+  )|>
+## Create the Bar Chart
+plot_ly(
+    x = ~Month,
+  y = ~AverageTemp,
+  type = 'bar',
+  
+  # This creates the text you see when you hover over a bar
+  hoverinfo = 'text',
+  text = ~paste0("Month: ", Month, "<br>",
+                 "Avg Temp: ", round(AverageTemp, 1), "°C")
+) |> 
+layout(
+  xaxis = list(title = "Month"),
+  yaxis = list(title = "Average Temperature (°C)")
+)
 
+# 4. Show the Plot
+pc
 ```
 
